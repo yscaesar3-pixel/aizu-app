@@ -1,0 +1,9 @@
+{
+  "appId": "com.yutaXXX.aizu",
+  "appName": "\u5408\u56f3\uff01\uff01",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always"
+  },
+  "backgroundColor": "#FDFDFC"
+}

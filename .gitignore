@@ -1,0 +1,26 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Capacitor
+ios/App/App/public/
+!ios/App/App/public/.gitkeep
+
+# Xcode
+ios/App/build/
+ios/App/DerivedData/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# CocoaPods (未使用だが念のため)
+ios/App/Pods/
+ios/App/Podfile.lock
+
+# macOS
+.DS_Store
+
+# Codemagic build output
+build/

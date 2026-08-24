@@ -1,0 +1,56 @@
+workflows:
+  aizu-ios-release:
+    name: aizu iOS Release
+    max_build_duration: 30
+    integrations:
+      app_store_connect: oddiro_asc_key
+    environment:
+      groups:
+        - aizu_ios_signing   # CERTIFICATE_PRIVATE_KEY を格納（既存アプリと同じ配布証明書を使い回す）
+      vars:
+        BUNDLE_ID: "com.yutaXXX.aizu"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: latest
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: npm install
+        script: |
+          npm install
+
+      - name: Capacitor sync (SPM, no CocoaPods)
+        script: |
+          npx cap sync ios
+
+      - name: Set build number from Codemagic build number
+        script: |
+          cd ios/App
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj
+
+      - name: Set up code signing (automatic, reuse shared certificate)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build ipa for App Store
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false   # App Store審査提出はApp Store Connect画面から手動で行う
+        beta_groups:
+          - App Store Connect Users  # 内部テスターグループ名は実際の設定に合わせて変更してください

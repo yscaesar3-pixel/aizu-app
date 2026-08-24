@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>合図！！</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E33A3A">
+<style>
+  :root {
+    --red: #E62E2E;
+    --red-dark: #C21F1F;
+    --red-soft: #FBE4E2;
+    --ink: #2B2B2B;
+    --paper: #FFFFFF;
+    --paper-dim: #FFFFFF;
+    --line: #E4E0DB;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .screen {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .screen.active { display: flex; }
+
+  /* ---------- Setup ---------- */
+  #setup-header {
+    padding: 28px 20px 4px;
+    text-align: center;
+  }
+  #setup-header img {
+    height: 46px;
+    width: auto;
+  }
+  #setup-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 0 24px;
+  }
+  .picker-block {
+    text-align: center;
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    border-radius: 28px;
+    padding: 22px 34px 20px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .picker-label {
+    font-size: 13px;
+    color: #7A7670;
+    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .picker-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+  }
+  select.time-select {
+    font-size: 36px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    border: none;
+    background: transparent;
+    color: var(--red);
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 4px 2px;
+  }
+  .time-unit { font-size: 15px; color: #7A7670; margin-right: 10px; font-weight: 600; }
+  .hint-text { font-size: 12px; color: #918D87; margin-top: 10px; }
+
+  .toggle-row {
+    width: 100%;
+    max-width: 320px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .toggle-row:last-of-type { border-bottom: none; }
+  .toggle-label { font-size: 16px; color: var(--ink); font-weight: 500; }
+  .switch {
+    position: relative;
+    width: 54px;
+    height: 32px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute; inset: 0;
+    background: #D6D2CC;
+    border-radius: 999px;
+    transition: background 0.2s;
+  }
+  .switch-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 26px; height: 26px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+    transition: transform 0.2s;
+  }
+  .switch input:checked + .switch-track { background: var(--red); }
+  .switch input:checked + .switch-track + .switch-thumb { transform: translateX(22px); }
+
+  #start-btn-wrap { padding: 8px 24px 20px; }
+  #start-btn {
+    width: 100%;
+    max-width: 320px;
+    display: block;
+    margin: 0 auto;
+    padding: 19px;
+    font-size: 19px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--red);
+    border: none;
+    border-radius: 26px;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 0 var(--red-dark);
+  }
+  #start-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--red-dark); }
+
+  /* ---------- Waiting ---------- */
+  #waiting-top {
+    display: flex;
+    justify-content: flex-start;
+    padding: 14px 16px;
+  }
+  #end-btn {
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    color: #6E6A64;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 999px;
+  }
+  #waiting-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #waiting-text {
+    font-size: 20px;
+    color: #9A968F;
+    letter-spacing: 0.1em;
+  }
+
+  /* ---------- Signal ---------- */
+  #signal-screen {
+    background: var(--red);
+    align-items: center;
+    justify-content: center;
+  }
+  #signal-text {
+    font-size: min(22vw, 96px);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+
+  /* ---------- Ad banner (placeholder) ---------- */
+  .ad-banner {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: #9A968F;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP -->
+  <div id="setup-screen" class="screen active">
+    <div id="setup-header"><img src="assets/logo.png" alt="合図！！"></div>
+    <div id="setup-body">
+      <div class="picker-block">
+        <div class="picker-label">上限時間</div>
+        <div class="picker-row">
+          <select id="min-select" class="time-select" aria-label="上限時間 分"></select>
+          <span class="time-unit">分</span>
+          <select id="sec-select" class="time-select" aria-label="上限時間 秒"></select>
+          <span class="time-unit">秒</span>
+        </div>
+        <div class="hint-text">10秒〜60分の範囲で設定できます</div>
+      </div>
+
+      <div style="width:100%; max-width:320px;">
+        <div class="toggle-row">
+          <span class="toggle-label">効果音</span>
+          <label class="switch">
+            <input type="checkbox" id="sound-toggle" checked aria-label="効果音 ON/OFF">
+            <span class="switch-track"></span>
+            <span class="switch-thumb"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">振動</span>
+          <label class="switch">
+            <input type="checkbox" id="vibration-toggle" checked aria-label="振動 ON/OFF">
+            <span class="switch-track"></span>
+            <span class="switch-thumb"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div id="start-btn-wrap">
+      <button id="start-btn" aria-label="スタート">スタート</button>
+    </div>
+    <div class="ad-banner" id="ad-banner-setup">広告読み込み中…</div>
+  </div>
+
+  <!-- WAITING -->
+  <div id="waiting-screen" class="screen">
+    <div id="waiting-top">
+      <button id="end-btn" aria-label="終了">終了</button>
+    </div>
+    <div id="waiting-body">
+      <div id="waiting-text">待機中…</div>
+    </div>
+    <div class="ad-banner" id="ad-banner-waiting">広告読み込み中…</div>
+  </div>
+
+  <!-- SIGNAL -->
+  <div id="signal-screen" class="screen" role="button" aria-label="タップして合図を閉じる">
+    <div id="signal-text">合図！！</div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- AdMob (Capacitor native bridge) ----------
+  // 重要: 非バンドルの単一HTML Capacitorプロジェクトでは動的 import() ではなく
+  // window.Capacitor.Plugins.AdMob を直接参照すること（サイレント失敗対策）。
+  //
+  // 開発中は必ずテスト広告を使う。ストア提出直前に IS_PRODUCTION_ADS を true にする。
+  const IS_PRODUCTION_ADS = false; // ← 本番申請前にここを true へ
+  const TEST_BANNER_AD_UNIT_ID = 'ca-app-pub-3940256099942544/2934735716'; // Google公式テストバナーID(iOS)
+  const PROD_BANNER_AD_UNIT_ID = 'ca-app-pub-8174756915786797/4425929739'; // aizu_ios_banner
+  const BANNER_AD_UNIT_ID = IS_PRODUCTION_ADS ? PROD_BANNER_AD_UNIT_ID : TEST_BANNER_AD_UNIT_ID;
+  let admobReady = false;
+
+  async function initAdMob() {
+    const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+    if (!AdMob) return; // ネイティブ環境外(ブラウザ/PWA)では何もしない。機能に影響なし。
+    try {
+      if (typeof AdMob.trackingAuthorizationStatus === 'function') {
+        const { status } = await AdMob.trackingAuthorizationStatus();
+        if (status === 'notDetermined' && typeof AdMob.requestTrackingAuthorization === 'function') {
+          await AdMob.requestTrackingAuthorization();
+        }
+      }
+      await AdMob.initialize({ initializeForTesting: !IS_PRODUCTION_ADS });
+      admobReady = true;
+      await showBanner();
+    } catch (e) {
+      admobReady = false; // 失敗してもアプリ機能は通常どおり動作させる
+    }
+  }
+
+  async function showBanner() {
+    const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+    if (!AdMob || !admobReady) return;
+    try {
+      await AdMob.showBanner({
+        adId: BANNER_AD_UNIT_ID,
+        adSize: 'ADAPTIVE_BANNER',
+        position: 'BOTTOM_CENTER',
+        isTesting: !IS_PRODUCTION_ADS
+      });
+    } catch (e) { /* 広告ロード失敗時も機能に影響させない */ }
+  }
+
+  async function hideBanner() {
+    const AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+    if (!AdMob || !admobReady) return;
+    try { await AdMob.hideBanner(); } catch (e) {}
+  }
+
+  // ---------- Elements ----------
+  const setupScreen = document.getElementById('setup-screen');
+  const waitingScreen = document.getElementById('waiting-screen');
+  const signalScreen = document.getElementById('signal-screen');
+
+  const minSelect = document.getElementById('min-select');
+  const secSelect = document.getElementById('sec-select');
+  const soundToggle = document.getElementById('sound-toggle');
+  const vibrationToggle = document.getElementById('vibration-toggle');
+  const startBtn = document.getElementById('start-btn');
+  const endBtn = document.getElementById('end-btn');
+
+  // ---------- Populate pickers ----------
+  for (let m = 0; m <= 60; m++) {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    minSelect.appendChild(opt);
+  }
+  for (let s = 0; s <= 59; s++) {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = String(s).padStart(2, '0');
+    secSelect.appendChild(opt);
+  }
+
+  // ---------- Settings persistence (UserDefaults相当) ----------
+  const STORAGE_KEY = 'aizu.settings.v1';
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { minutes: 5, seconds: 0, soundOn: true, vibrationOn: true };
+  }
+  function saveSettings() {
+    const s = {
+      minutes: parseInt(minSelect.value, 10),
+      seconds: parseInt(secSelect.value, 10),
+      soundOn: soundToggle.checked,
+      vibrationOn: vibrationToggle.checked
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  }
+
+  const initial = loadSettings();
+  minSelect.value = initial.minutes;
+  secSelect.value = initial.seconds;
+  soundToggle.checked = initial.soundOn;
+  vibrationToggle.checked = initial.vibrationOn;
+
+  function enforceMinimum() {
+    // 0分0秒〜0分9秒は選択不可 → 自動的に10秒へ補正
+    const m = parseInt(minSelect.value, 10);
+    const s = parseInt(secSelect.value, 10);
+    if (m === 0 && s < 10) {
+      secSelect.value = 10;
+    }
+  }
+  minSelect.addEventListener('change', () => { enforceMinimum(); saveSettings(); });
+  secSelect.addEventListener('change', () => { enforceMinimum(); saveSettings(); });
+  soundToggle.addEventListener('change', saveSettings);
+  vibrationToggle.addEventListener('change', saveSettings);
+
+  // ---------- State machine ----------
+  const STATE = { SETUP: 'setup', WAITING: 'waiting', SIGNAL: 'signal' };
+  let state = STATE.SETUP;
+
+  function showScreen(target) {
+    [setupScreen, waitingScreen, signalScreen].forEach(el => el.classList.remove('active'));
+    target.classList.add('active');
+  }
+
+  // ---------- Timer (pauses while not visible) ----------
+  let upperLimitSeconds = 300;
+  let remainingMs = 0;
+  let lastTickAt = 0;
+  let rafId = null;
+  let running = false;
+
+  function randomDelaySeconds() {
+    // Random.uniform(1.0, upperLimitSeconds)
+    return 1.0 + Math.random() * (upperLimitSeconds - 1.0);
+  }
+
+  function scheduleNextSignal() {
+    cancelTimer();
+    const delay = randomDelaySeconds();
+    remainingMs = delay * 1000;
+    startTimerLoop();
+  }
+
+  function startTimerLoop() {
+    running = true;
+    lastTickAt = performance.now();
+    tick();
+  }
+
+  function tick() {
+    if (!running) return;
+    if (document.visibilityState !== 'visible') {
+      // paused while backgrounded; onForeground() will resume
+      rafId = requestAnimationFrame(tick);
+      return;
+    }
+    const now = performance.now();
+    const delta = now - lastTickAt;
+    lastTickAt = now;
+    remainingMs -= delta;
+    if (remainingMs <= 0) {
+      running = false;
+      enterSignalState();
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function cancelTimer() {
+    running = false;
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+  }
+
+  // ---------- Wake lock (画面スリープ防止) ----------
+  let wakeLock = null;
+  async function disableAutoLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (e) { /* best effort */ }
+  }
+  function enableAutoLock() {
+    if (wakeLock) {
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && (state === STATE.WAITING || state === STATE.SIGNAL) && !wakeLock) {
+      disableAutoLock();
+    }
+    if (document.visibilityState === 'visible' && state === STATE.WAITING) {
+      lastTickAt = performance.now();
+    }
+  });
+
+  // ---------- Sound (short beep, no loop) ----------
+  let audioCtx = null;
+  function playSoundIfEnabled() {
+    if (!soundToggle.checked) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
+    } catch (e) { /* silent fail, app must keep working */ }
+  }
+
+  // ---------- Haptics ----------
+  function playHapticIfEnabled() {
+    if (!vibrationToggle.checked) return;
+    if (navigator.vibrate) {
+      navigator.vibrate(60); // Capacitor版では UINotificationFeedbackGenerator 等に置換
+    }
+  }
+
+  // ---------- State transitions ----------
+  function startSession() {
+    upperLimitSeconds = parseInt(minSelect.value, 10) * 60 + parseInt(secSelect.value, 10);
+    if (upperLimitSeconds < 10) upperLimitSeconds = 10;
+    state = STATE.WAITING;
+    showScreen(waitingScreen);
+    disableAutoLock();
+    scheduleNextSignal();
+    showBanner();
+  }
+
+  let signalTapGuard = false;
+  function enterSignalState() {
+    state = STATE.SIGNAL;
+    signalTapGuard = false;
+    showScreen(signalScreen);
+    hideBanner();
+    playSoundIfEnabled();
+    playHapticIfEnabled();
+  }
+
+  function onSignalTapped() {
+    if (state !== STATE.SIGNAL || signalTapGuard) return;
+    signalTapGuard = true; // 連打ガード
+    state = STATE.WAITING;
+    showScreen(waitingScreen);
+    scheduleNextSignal();
+    showBanner();
+  }
+
+  function endSession() {
+    cancelTimer();
+    enableAutoLock();
+    state = STATE.SETUP;
+    showScreen(setupScreen);
+    showBanner();
+  }
+
+  // ---------- Wire up buttons (start-button double-tap guard included) ----------
+  let starting = false;
+  startBtn.addEventListener('click', () => {
+    if (starting) return;
+    starting = true;
+    startSession();
+    setTimeout(() => { starting = false; }, 300);
+  });
+  endBtn.addEventListener('click', endSession);
+  signalScreen.addEventListener('click', onSignalTapped);
+
+  // 初期状態を確定
+  enforceMinimum();
+  initAdMob();
+})();
+</script>
+</body>
+</html>
