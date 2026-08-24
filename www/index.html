@@ -483,12 +483,14 @@
       const gain = audioCtx.createGain();
       osc.type = 'sine';
       osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.3, now + 0.03);   // 立ち上がり
+      gain.gain.setValueAtTime(0.3, now + 0.55);                 // 音量を維持する時間を延長
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);  // 余韻を伸ばす
       osc.connect(gain).connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.35);
+      osc.stop(now + 0.9);
     } catch (e) { /* silent fail, app must keep working */ }
   }
 
@@ -496,16 +498,26 @@
   // 重要: iOS SafariにはWeb標準のVibration API (navigator.vibrate) が存在しないため、
   // Capacitor公式プラグイン @capacitor/haptics のネイティブブリッジを直接参照する。
   // (非バンドルの単一HTMLプロジェクトなので import ではなく window.Capacitor.Plugins を使う)
+  //
+  // iOSのUIImpactFeedbackGeneratorは単発の短い打撃のみで持続時間を指定できないため、
+  // 短い間隔で複数回連続実行することで「長めの振動」を表現する。
+  function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
   async function playHapticIfEnabled() {
     if (!vibrationToggle.checked) return;
     const Haptics = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
     if (Haptics) {
       try {
-        await Haptics.impact({ style: 'HEAVY' }); // 強めのハプティクス
+        const pulses = 4;       // 連続回数
+        const interval = 140;   // 各打撃の間隔(ms)
+        for (let i = 0; i < pulses; i++) {
+          await Haptics.impact({ style: 'HEAVY' });
+          if (i < pulses - 1) await delay(interval);
+        }
         return;
       } catch (e) { /* フォールバックへ */ }
     }
-    if (navigator.vibrate) navigator.vibrate(60); // ネイティブ環境外(ブラウザ)向けフォールバック
+    if (navigator.vibrate) navigator.vibrate(600); // ネイティブ環境外(ブラウザ)向けフォールバック
   }
 
   // ---------- State transitions ----------
