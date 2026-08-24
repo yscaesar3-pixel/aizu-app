@@ -30,7 +30,7 @@ workflows:
 
       - name: Apply fetched signing files to Xcode project
         script: |
-          xcode-project use-profiles --custom-export-options='{"testFlightInternalTestingOnly": true}'
+          xcode-project use-profiles
 
       - name: Build ipa for App Store
         script: |

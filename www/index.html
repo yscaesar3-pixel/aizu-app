@@ -274,8 +274,8 @@
   // 重要: 非バンドルの単一HTML Capacitorプロジェクトでは動的 import() ではなく
   // window.Capacitor.Plugins.AdMob を直接参照すること（サイレント失敗対策）。
   //
-  // 開発中は必ずテスト広告を使う。ストア提出直前に IS_PRODUCTION_ADS を true にする。
-  const IS_PRODUCTION_ADS = false; // ← 本番申請前にここを true へ
+  // 本番用AdMob広告を使用中（提出直前にtrueへ切り替え済み）。
+  const IS_PRODUCTION_ADS = true;
   const TEST_BANNER_AD_UNIT_ID = 'ca-app-pub-3940256099942544/2934735716'; // Google公式テストバナーID(iOS)
   const PROD_BANNER_AD_UNIT_ID = 'ca-app-pub-8174756915786797/4425929739'; // aizu_ios_banner
   const BANNER_AD_UNIT_ID = IS_PRODUCTION_ADS ? PROD_BANNER_AD_UNIT_ID : TEST_BANNER_AD_UNIT_ID;
