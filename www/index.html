@@ -466,11 +466,19 @@
   });
 
   // ---------- Sound (short beep, no loop) ----------
+  // 重要: iOSのWKWebViewはユーザー操作の直接の結果でない限りWeb Audioの再生をブロックする。
+  // そのためAudioContextはユーザー操作（スタートボタンのタップ）の中で生成・resumeしておく。
   let audioCtx = null;
+  function primeAudio() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { /* 失敗しても機能に影響させない */ }
+  }
   function playSoundIfEnabled() {
     if (!soundToggle.checked) return;
     try {
-      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioCtx) return; // primeAudio()が未実行(＝ユーザー操作を経ていない)場合は鳴らさない
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
@@ -485,15 +493,24 @@
   }
 
   // ---------- Haptics ----------
-  function playHapticIfEnabled() {
+  // 重要: iOS SafariにはWeb標準のVibration API (navigator.vibrate) が存在しないため、
+  // Capacitor公式プラグイン @capacitor/haptics のネイティブブリッジを直接参照する。
+  // (非バンドルの単一HTMLプロジェクトなので import ではなく window.Capacitor.Plugins を使う)
+  async function playHapticIfEnabled() {
     if (!vibrationToggle.checked) return;
-    if (navigator.vibrate) {
-      navigator.vibrate(60); // Capacitor版では UINotificationFeedbackGenerator 等に置換
+    const Haptics = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+    if (Haptics) {
+      try {
+        await Haptics.impact({ style: 'HEAVY' }); // 強めのハプティクス
+        return;
+      } catch (e) { /* フォールバックへ */ }
     }
+    if (navigator.vibrate) navigator.vibrate(60); // ネイティブ環境外(ブラウザ)向けフォールバック
   }
 
   // ---------- State transitions ----------
   function startSession() {
+    primeAudio(); // ユーザー操作(このクリック)の中でAudioContextを生成・resumeする
     upperLimitSeconds = parseInt(minSelect.value, 10) * 60 + parseInt(secSelect.value, 10);
     if (upperLimitSeconds < 10) upperLimitSeconds = 10;
     state = STATE.WAITING;
@@ -516,6 +533,7 @@
   function onSignalTapped() {
     if (state !== STATE.SIGNAL || signalTapGuard) return;
     signalTapGuard = true; // 連打ガード
+    primeAudio(); // このタップ(ユーザー操作)のうちにAudioContextを再resumeしておく
     state = STATE.WAITING;
     showScreen(waitingScreen);
     scheduleNextSignal();

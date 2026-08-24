@@ -30,7 +30,7 @@ workflows:
 
       - name: Apply fetched signing files to Xcode project
         script: |
-          xcode-project use-profiles
+          xcode-project use-profiles --custom-export-options='{"testFlightInternalTestingOnly": true}'
 
       - name: Build ipa for App Store
         script: |
@@ -45,7 +45,5 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
-        submit_to_app_store: false   # App Store審査提出はApp Store Connect画面から手動で行う
         beta_groups:
-          - App Store Connect Users  # 内部テスターグループ名は実際の設定に合わせて変更してください
+          - App Store Connect Users  # ASC側の実際のInternal Testingグループ名に置き換えてください
