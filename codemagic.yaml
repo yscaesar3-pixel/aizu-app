@@ -5,8 +5,6 @@ workflows:
     integrations:
       app_store_connect: oddiro_asc_key
     environment:
-      groups:
-        - aizu_ios_signing   # CERTIFICATE_PRIVATE_KEY を格納（既存アプリと同じ配布証明書を使い回す）
       vars:
         BUNDLE_ID: "com.yutaXXX.aizu"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
@@ -28,7 +26,7 @@ workflows:
           cd ios/App
           sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj
 
-      - name: Set up code signing (automatic, reuse shared certificate)
+      - name: Set up code signing (automatic via App Store Connect API)
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
