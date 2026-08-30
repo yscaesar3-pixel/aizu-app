@@ -19,6 +19,9 @@ end
 target 'App' do
   capacitor_pods
   # Add your Pods here
+  # 重要: GoogleUserMessagingPlatform 3.0.0でSwift API名が変更(UMPConsentStatus→ConsentStatus)され、
+  # CapacitorCommunityAdmobプラグインのソースコード(旧API名)と非互換になるため、2.x系に固定する。
+  pod 'GoogleUserMessagingPlatform', '~> 2.5'
 end
 
 post_install do |installer|
