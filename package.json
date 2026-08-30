@@ -6,6 +6,7 @@
     "sync": "cap sync ios"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^6.2.0",
     "@capacitor/app": "^6.0.1",
     "@capacitor/core": "^6.1.2",
     "@capacitor/haptics": "^6.0.3",
