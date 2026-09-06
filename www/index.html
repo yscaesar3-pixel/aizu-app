@@ -223,6 +223,15 @@
         <div class="hint-text">10秒〜60分の範囲で設定できます</div>
       </div>
 
+      <div class="picker-block" style="padding: 18px 20px 16px;">
+        <div class="picker-label" style="text-align:left; margin-bottom: 8px;">合図の文字（10文字まで）</div>
+        <input type="text" id="signal-text-input" maxlength="10" placeholder="合図！！"
+               aria-label="合図の文字"
+               style="width:100%; font-size:20px; font-weight:800; color:var(--red);
+                      border:none; background:transparent; text-align:center; padding:6px 0;
+                      font-family:inherit;">
+      </div>
+
       <div style="width:100%; max-width:320px;">
         <div class="toggle-row">
           <span class="toggle-label">効果音</span>
@@ -327,8 +336,11 @@
   const secSelect = document.getElementById('sec-select');
   const soundToggle = document.getElementById('sound-toggle');
   const vibrationToggle = document.getElementById('vibration-toggle');
+  const signalTextInput = document.getElementById('signal-text-input');
+  const signalTextEl = document.getElementById('signal-text');
   const startBtn = document.getElementById('start-btn');
   const endBtn = document.getElementById('end-btn');
+  const DEFAULT_SIGNAL_TEXT = '合図！！';
 
   // ---------- Populate pickers ----------
   for (let m = 0; m <= 60; m++) {
@@ -349,14 +361,15 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return { minutes: 5, seconds: 0, soundOn: true, vibrationOn: true };
+    return { minutes: 5, seconds: 0, soundOn: true, vibrationOn: true, signalText: '' };
   }
   function saveSettings() {
     const s = {
       minutes: parseInt(minSelect.value, 10),
       seconds: parseInt(secSelect.value, 10),
       soundOn: soundToggle.checked,
-      vibrationOn: vibrationToggle.checked
+      vibrationOn: vibrationToggle.checked,
+      signalText: signalTextInput.value.slice(0, 10)
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   }
@@ -366,6 +379,18 @@
   secSelect.value = initial.seconds;
   soundToggle.checked = initial.soundOn;
   vibrationToggle.checked = initial.vibrationOn;
+  signalTextInput.value = initial.signalText || '';
+
+  // 合図画面に表示する文字を取得(未入力ならデフォルト)し、長さに応じてフォントサイズを調整
+  function applySignalText() {
+    const text = (signalTextInput.value || '').trim().slice(0, 10) || DEFAULT_SIGNAL_TEXT;
+    signalTextEl.textContent = text;
+    // 文字数が多いほど縮小(4文字前後の「合図！！」を基準に、22vw/96pxをキャップとする)
+    const len = text.length;
+    const vwSize = Math.max(10, Math.min(22, 88 / len));
+    const pxCap = Math.max(40, Math.min(96, 380 / len));
+    signalTextEl.style.fontSize = `min(${vwSize}vw, ${pxCap}px)`;
+  }
 
   function enforceMinimum() {
     // 0分0秒〜0分9秒は選択不可 → 自動的に10秒へ補正
@@ -379,6 +404,7 @@
   secSelect.addEventListener('change', () => { enforceMinimum(); saveSettings(); });
   soundToggle.addEventListener('change', saveSettings);
   vibrationToggle.addEventListener('change', saveSettings);
+  signalTextInput.addEventListener('input', saveSettings);
 
   // ---------- State machine ----------
   const STATE = { SETUP: 'setup', WAITING: 'waiting', SIGNAL: 'signal' };
@@ -536,6 +562,7 @@
   function enterSignalState() {
     state = STATE.SIGNAL;
     signalTapGuard = false;
+    applySignalText();
     showScreen(signalScreen);
     hideBanner();
     playSoundIfEnabled();
