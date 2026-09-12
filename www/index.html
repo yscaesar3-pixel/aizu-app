@@ -167,18 +167,27 @@
   #waiting-body {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 14px;
   }
   #waiting-text {
     font-size: 20px;
     color: #9A968F;
     letter-spacing: 0.1em;
   }
+  #waiting-reaction {
+    font-size: 13px;
+    color: #B0ADA9;
+    letter-spacing: 0.03em;
+    text-align: center;
+    min-height: 18px;
+  }
 
   /* ---------- Signal ---------- */
   #signal-screen {
-    background: var(--red);
+    background: var(--signal-color, var(--red));
     align-items: center;
     justify-content: center;
   }
@@ -188,6 +197,25 @@
     color: #fff;
     letter-spacing: 0.02em;
     text-align: center;
+  }
+
+  /* ---------- Color theme swatches ---------- */
+  .color-swatch-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .color-swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .color-swatch.selected {
+    border-color: var(--ink);
   }
 
   /* ---------- Ad banner (placeholder) ---------- */
@@ -230,6 +258,8 @@
                style="width:100%; font-size:20px; font-weight:800; color:var(--red);
                       border:none; background:transparent; text-align:center; padding:6px 0;
                       font-family:inherit;">
+        <div class="picker-label" style="text-align:center; margin-top:10px; margin-bottom: 0;">合図画面の色</div>
+        <div class="color-swatch-row" id="color-swatch-row"></div>
       </div>
 
       <div style="width:100%; max-width:320px;">
@@ -264,6 +294,7 @@
     </div>
     <div id="waiting-body">
       <div id="waiting-text">待機中…</div>
+      <div id="waiting-reaction"></div>
     </div>
     <div class="ad-banner" id="ad-banner-waiting">広告読み込み中…</div>
   </div>
@@ -338,9 +369,18 @@
   const vibrationToggle = document.getElementById('vibration-toggle');
   const signalTextInput = document.getElementById('signal-text-input');
   const signalTextEl = document.getElementById('signal-text');
+  const colorSwatchRow = document.getElementById('color-swatch-row');
+  const waitingReactionEl = document.getElementById('waiting-reaction');
   const startBtn = document.getElementById('start-btn');
   const endBtn = document.getElementById('end-btn');
   const DEFAULT_SIGNAL_TEXT = '合図！！';
+  const SIGNAL_COLORS = [
+    { id: 'red',    hex: '#E62E2E' },
+    { id: 'blue',   hex: '#2166D8' },
+    { id: 'green',  hex: '#1E9E51' },
+    { id: 'purple', hex: '#7A3FE0' },
+    { id: 'orange', hex: '#E8791E' }
+  ];
 
   // ---------- Populate pickers ----------
   for (let m = 0; m <= 60; m++) {
@@ -354,6 +394,28 @@
     secSelect.appendChild(opt);
   }
 
+  // ---------- Color swatches (合図画面の背景色のみ切り替え。通常画面のブランドカラーは変えない) ----------
+  SIGNAL_COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'color-swatch';
+    btn.style.background = c.hex;
+    btn.dataset.colorId = c.id;
+    btn.setAttribute('aria-label', '合図画面の色: ' + c.id);
+    btn.addEventListener('click', () => {
+      selectedSignalColor = c.hex;
+      updateSwatchSelection();
+      saveSettings();
+    });
+    colorSwatchRow.appendChild(btn);
+  });
+  function updateSwatchSelection() {
+    Array.from(colorSwatchRow.children).forEach(btn => {
+      const c = SIGNAL_COLORS.find(x => x.id === btn.dataset.colorId);
+      btn.classList.toggle('selected', c && c.hex === selectedSignalColor);
+    });
+  }
+
   // ---------- Settings persistence (UserDefaults相当) ----------
   const STORAGE_KEY = 'aizu.settings.v1';
   function loadSettings() {
@@ -361,7 +423,7 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return { minutes: 5, seconds: 0, soundOn: true, vibrationOn: true, signalText: '' };
+    return { minutes: 5, seconds: 0, soundOn: true, vibrationOn: true, signalText: '', signalColor: SIGNAL_COLORS[0].hex, bestReactionMs: null };
   }
   function saveSettings() {
     const s = {
@@ -369,7 +431,9 @@
       seconds: parseInt(secSelect.value, 10),
       soundOn: soundToggle.checked,
       vibrationOn: vibrationToggle.checked,
-      signalText: signalTextInput.value.slice(0, 10)
+      signalText: signalTextInput.value.slice(0, 10),
+      signalColor: selectedSignalColor,
+      bestReactionMs: bestReactionMs
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   }
@@ -380,6 +444,9 @@
   soundToggle.checked = initial.soundOn;
   vibrationToggle.checked = initial.vibrationOn;
   signalTextInput.value = initial.signalText || '';
+  let selectedSignalColor = initial.signalColor || SIGNAL_COLORS[0].hex;
+  let bestReactionMs = (typeof initial.bestReactionMs === 'number') ? initial.bestReactionMs : null;
+  updateSwatchSelection();
 
   // 合図画面に表示する文字を取得(未入力ならデフォルト)し、長さに応じてフォントサイズを調整
   function applySignalText() {
@@ -390,6 +457,22 @@
     const vwSize = Math.max(10, Math.min(22, 88 / len));
     const pxCap = Math.max(40, Math.min(96, 380 / len));
     signalTextEl.style.fontSize = `min(${vwSize}vw, ${pxCap}px)`;
+  }
+
+  function applySignalColor() {
+    signalScreen.style.setProperty('--signal-color', selectedSignalColor);
+  }
+
+  // 反応速度の表示を更新(残り時間・次回予定時刻は表示しない仕様と矛盾しないよう、直近の結果のみ表示)
+  function updateReactionDisplay(lastMs) {
+    if (lastMs == null && bestReactionMs == null) {
+      waitingReactionEl.textContent = '';
+      return;
+    }
+    const parts = [];
+    if (lastMs != null) parts.push(`反応: ${(lastMs / 1000).toFixed(3)}秒`);
+    if (bestReactionMs != null) parts.push(`ベスト: ${(bestReactionMs / 1000).toFixed(3)}秒`);
+    waitingReactionEl.textContent = parts.join('　');
   }
 
   function enforceMinimum() {
@@ -553,26 +636,34 @@
     if (upperLimitSeconds < 10) upperLimitSeconds = 10;
     state = STATE.WAITING;
     showScreen(waitingScreen);
+    updateReactionDisplay(null); // 新しいセッションでは直近の反応速度表示をリセット(ベストは残す)
     disableAutoLock();
     scheduleNextSignal();
     showBanner();
   }
 
   let signalTapGuard = false;
+  let signalShownAt = 0;
   function enterSignalState() {
     state = STATE.SIGNAL;
     signalTapGuard = false;
     applySignalText();
+    applySignalColor();
     showScreen(signalScreen);
     hideBanner();
     playSoundIfEnabled();
     playHapticIfEnabled();
+    signalShownAt = performance.now(); // 反応速度計測の起点
   }
 
   function onSignalTapped() {
     if (state !== STATE.SIGNAL || signalTapGuard) return;
     signalTapGuard = true; // 連打ガード
     primeAudio(); // このタップ(ユーザー操作)のうちにAudioContextを再resumeしておく
+    const reactionMs = performance.now() - signalShownAt;
+    if (bestReactionMs == null || reactionMs < bestReactionMs) bestReactionMs = reactionMs;
+    updateReactionDisplay(reactionMs);
+    saveSettings();
     state = STATE.WAITING;
     showScreen(waitingScreen);
     scheduleNextSignal();
