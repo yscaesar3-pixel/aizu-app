@@ -1,6 +1,6 @@
 workflows:
-  aizu-ios-release:
-    name: aizu iOS Release
+  aizu-native-ios-release:
+    name: aizu (Native) iOS Release
     max_build_duration: 30
     integrations:
       app_store_connect: oddiro_asc_key
@@ -9,24 +9,20 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.yutaXXX.aizu
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: latest
       xcode: latest
-      cocoapods: default
     scripts:
-      - name: npm install
+      - name: Install XcodeGen
         script: |
-          npm install
+          brew list xcodegen &>/dev/null || brew install xcodegen
 
-      - name: Capacitor sync (SPM, no CocoaPods)
+      - name: Generate Xcode project from project.yml (SPM dependencies resolved automatically)
         script: |
-          npx cap sync ios
+          xcodegen generate
 
       - name: Set build number from Codemagic build number
         script: |
-          cd ios/App
-          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj || true
 
       - name: Apply fetched signing files to Xcode project
         script: |
@@ -35,7 +31,7 @@ workflows:
       - name: Build ipa for App Store
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "App.xcodeproj" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
@@ -46,4 +42,4 @@ workflows:
       app_store_connect:
         auth: integration
         beta_groups:
-          - App Store Connect Users  # ASC側の実際のInternal Testingグループ名に置き換えてください
+          - App Store Connect Users
