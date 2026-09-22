@@ -20,6 +20,15 @@ workflows:
         script: |
           xcodegen generate
 
+      - name: DEBUG - verify Info.plist / device family settings were applied to the generated project
+        script: |
+          echo "----- GENERATE_INFOPLIST_FILE -----"
+          grep "GENERATE_INFOPLIST_FILE" App.xcodeproj/project.pbxproj || echo "(not found)"
+          echo "----- INFOPLIST_FILE -----"
+          grep "INFOPLIST_FILE" App.xcodeproj/project.pbxproj || echo "(not found)"
+          echo "----- TARGETED_DEVICE_FAMILY -----"
+          grep "TARGETED_DEVICE_FAMILY" App.xcodeproj/project.pbxproj || echo "(not found)"
+
       - name: Set build number from Codemagic build number
         script: |
           sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj || true
