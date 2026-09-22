@@ -9,31 +9,46 @@ struct ContentView: View {
     @State private var signalShownAt: Date?
 
     var body: some View {
-        Group {
-            switch timer.state {
-            case .setup:
-                SetupView(settings: settings, onStart: startSession)
-            case .waiting:
-                WaitingView(
-                    lastReactionMs: lastReactionMs,
-                    bestReactionMs: settings.bestReactionMs,
-                    onEnd: endSession
-                )
-            case .signal:
-                SignalView(
-                    text: settings.displaySignalText,
-                    backgroundColor: settings.signalColor,
-                    onTap: acknowledgeSignal
-                )
+        currentScreen
+            .onChange(of: timer.state) { newState in
+                UIApplication.shared.isIdleTimerDisabled = (newState == .waiting || newState == .signal)
             }
+            .onAppear {
+                timer.onSignal = { handleSignalShown() }
+                AdMobService.requestTrackingAndInitialize()
+            }
+    }
+
+    @ViewBuilder
+    private var currentScreen: some View {
+        switch timer.state {
+        case .setup:
+            setupScreen
+        case .waiting:
+            waitingScreen
+        case .signal:
+            signalScreen
         }
-        .onChange(of: timer.state) { newState in
-            UIApplication.shared.isIdleTimerDisabled = (newState == .waiting || newState == .signal)
-        }
-        .onAppear {
-            timer.onSignal = { handleSignalShown() }
-            AdMobService.requestTrackingAndInitialize()
-        }
+    }
+
+    private var setupScreen: some View {
+        SetupView(settings: settings, onStart: startSession)
+    }
+
+    private var waitingScreen: some View {
+        WaitingView(
+            lastReactionMs: lastReactionMs,
+            bestReactionMs: settings.bestReactionMs,
+            onEnd: endSession
+        )
+    }
+
+    private var signalScreen: some View {
+        SignalView(
+            text: settings.displaySignalText,
+            backgroundColor: settings.signalColor,
+            onTap: acknowledgeSignal
+        )
     }
 
     private func startSession() {
