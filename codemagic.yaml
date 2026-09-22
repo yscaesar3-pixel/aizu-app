@@ -34,6 +34,18 @@ workflows:
             --project "App.xcodeproj" \
             --scheme "$XCODE_SCHEME"
 
+      - name: DEBUG - dump the actually-compiled Info.plist from the built IPA
+        script: |
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          echo "Inspecting: $IPA_PATH"
+          rm -rf /tmp/ipa_inspect && mkdir -p /tmp/ipa_inspect
+          unzip -q "$IPA_PATH" -d /tmp/ipa_inspect
+          APP_PATH=$(find /tmp/ipa_inspect/Payload -maxdepth 1 -name "*.app" | head -1)
+          echo "App bundle: $APP_PATH"
+          echo "----- Compiled Info.plist (converted to XML) -----"
+          plutil -convert xml1 -o - "$APP_PATH/Info.plist"
+          echo "----------------------------------------------------"
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
