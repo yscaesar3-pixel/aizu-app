@@ -29,9 +29,12 @@ workflows:
           echo "----- TARGETED_DEVICE_FAMILY -----"
           grep "TARGETED_DEVICE_FAMILY" App.xcodeproj/project.pbxproj || echo "(not found)"
 
-      - name: Set build number from Codemagic build number
+      - name: Set build number AND marketing version explicitly (force via sed, do not rely on project.yml alone)
         script: |
-          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj || true
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = 2.0;/" App.xcodeproj/project.pbxproj
+          echo "----- Confirm values after sed -----"
+          grep "CURRENT_PROJECT_VERSION\|MARKETING_VERSION" App.xcodeproj/project.pbxproj
 
       - name: Apply fetched signing files to Xcode project
         script: |
