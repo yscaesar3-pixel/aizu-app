@@ -24,8 +24,10 @@ struct SetupView: View {
             .padding(.horizontal, 24)
             Spacer()
             startButton
-            BannerAdView(adUnitID: AdMobService.bannerAdUnitID)
-                .frame(height: 50)
+            if AdMobService.isAdMobEnabled {
+                BannerAdView(adUnitID: AdMobService.bannerAdUnitID)
+                    .frame(height: 50)
+            }
         }
         .background(paper.ignoresSafeArea())
     }

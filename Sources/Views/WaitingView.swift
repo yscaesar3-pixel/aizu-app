@@ -42,8 +42,10 @@ struct WaitingView: View {
             }
             Spacer()
 
-            BannerAdView(adUnitID: AdMobService.bannerAdUnitID)
-                .frame(height: 50)
+            if AdMobService.isAdMobEnabled {
+                BannerAdView(adUnitID: AdMobService.bannerAdUnitID)
+                    .frame(height: 50)
+            }
         }
         .background(paper.ignoresSafeArea())
     }
