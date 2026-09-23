@@ -15,7 +15,7 @@ struct ContentView: View {
             }
             .onAppear {
                 timer.onSignal = { handleSignalShown() }
-                AdMobService.requestTrackingAndInitialize()
+                AdMobService.shared.requestTrackingAndInitialize()
             }
     }
 

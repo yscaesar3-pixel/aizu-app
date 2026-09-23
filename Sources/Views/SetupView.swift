@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SetupView: View {
     @ObservedObject var settings: UserSettings
+    @ObservedObject private var adMob = AdMobService.shared
     let onStart: () -> Void
 
     @State private var starting = false

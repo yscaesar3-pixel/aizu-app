@@ -4,6 +4,7 @@ struct WaitingView: View {
     let lastReactionMs: Double?
     let bestReactionMs: Double?
     let onEnd: () -> Void
+    @ObservedObject private var adMob = AdMobService.shared
 
     private let paper = Color(hex: 0xFFFFFF)
     private let line = Color(hex: 0xE4E0DB)
