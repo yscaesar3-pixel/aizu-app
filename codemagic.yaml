@@ -54,6 +54,7 @@ workflows:
             DEVELOPMENT_TEAM=ACYAZKU7GH \
             'CODE_SIGN_IDENTITY=Apple Distribution' \
             CODE_SIGN_STYLE=Manual \
+            'OTHER_LDFLAGS=-ObjC' \
             archive
 
       - name: Force-patch CFBundleVersion / CFBundleShortVersionString directly in the archived .app (bypasses whatever is breaking Xcode's own substitution)
