@@ -57,14 +57,45 @@ workflows:
             'OTHER_LDFLAGS=-ObjC' \
             archive
 
-      - name: Merge our custom Info.plist keys into the archived .app (Xcode was silently dropping them all - GADApplicationIdentifier, ATT description, SKAdNetworkItems, etc.)
+      - name: Add our custom Info.plist keys into the archived .app one by one (PlistBuddy's Merge command silently stopped after the first duplicate key and never added anything - confirmed via logs)
         script: |
           APP_PATH="build/ios/xcarchive/App.xcarchive/Products/Applications/App.app"
-          echo "----- Before merge -----"
-          plutil -convert xml1 -o - "$APP_PATH/Info.plist"
-          /usr/libexec/PlistBuddy -c "Merge Info.plist :" "$APP_PATH/Info.plist"
-          echo "----- After merge -----"
-          plutil -convert xml1 -o - "$APP_PATH/Info.plist"
+          PLIST="$APP_PATH/Info.plist"
+          PB="/usr/libexec/PlistBuddy"
+
+          echo "----- Before adding keys -----"
+          plutil -convert xml1 -o - "$PLIST"
+
+          "$PB" -c "Add :CFBundleDisplayName string 合図！！" "$PLIST"
+          "$PB" -c "Add :UILaunchScreen dict" "$PLIST"
+          "$PB" -c "Add :UISupportedInterfaceOrientations array" "$PLIST"
+          "$PB" -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
+          "$PB" -c "Add :UIRequiresFullScreen bool true" "$PLIST"
+          "$PB" -c "Add :UIViewControllerBasedStatusBarAppearance bool true" "$PLIST"
+          "$PB" -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST"
+          "$PB" -c "Add :GADApplicationIdentifier string ca-app-pub-8174756915786797~4913065225" "$PLIST"
+          "$PB" -c "Add :NSUserTrackingUsageDescription string 広告を最適化するために使用します。" "$PLIST"
+          "$PB" -c "Add :SKAdNetworkItems array" "$PLIST"
+
+          SKAD_IDS=(cstr6suwn9 4fzdc2evr5 2fnua5tdw4 ydx93a7ass p78axxw29g v72qych5uu \
+            ludvb6z3bs cp8zw746q7 3sh42y64q3 c6k4g5qg8m s39g8k73mm wg4vff78zm \
+            3qy4746246 f38h382jlk hs6bdukanm mlmmfzh3r3 v4nxqhlyqp wzmmz9fp6w \
+            su67r6k2v3 yclnxrl5pm t38b2kh725 7ug5zh24hu gta9lk7p23 vutu7akeur \
+            y5ghdn5j9k v9wttpbfk9 n38lu8286q 47vhws6wlr kbd757ywx3 9t245vhmpl \
+            a2p9lx4jpn 22mmun2rn5 44jx6755aq k674qkevps 4468km3ulz 2u9pt9hc89 \
+            8s468mfl3y klf5c3l5u5 ppxm28t8ap kbmxgpxpgc uw77j35x4d 578prtvx9j \
+            4dzt52r2t5 tl55sbb4fm c3frkrj4fj e5fvkxwrpn 8c4e2ghe7u 3rd42ekr43 \
+            97r2b46745 3qcr597p9d)
+
+          i=0
+          for id in "${SKAD_IDS[@]}"; do
+            "$PB" -c "Add :SKAdNetworkItems:$i dict" "$PLIST"
+            "$PB" -c "Add :SKAdNetworkItems:$i:SKAdNetworkIdentifier string ${id}.skadnetwork" "$PLIST"
+            i=$((i+1))
+          done
+
+          echo "----- After adding keys ($i SKAdNetworkItems entries added) -----"
+          plutil -convert xml1 -o - "$PLIST"
 
       - name: Force-patch CFBundleVersion / CFBundleShortVersionString directly in the archived .app (bypasses whatever is breaking Xcode's own substitution)
         script: |
