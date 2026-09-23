@@ -59,12 +59,24 @@ workflows:
       - name: Force-patch CFBundleVersion / CFBundleShortVersionString directly in the archived .app (bypasses whatever is breaking Xcode's own substitution)
         script: |
           BUILD_NUMBER=$((100 + PROJECT_BUILD_NUMBER))
+          ARCHIVE_INFO_PLIST="build/ios/xcarchive/App.xcarchive/Info.plist"
           APP_PATH="build/ios/xcarchive/App.xcarchive/Products/Applications/App.app"
+
+          # 1) .app本体のInfo.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.0" "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_PATH/Info.plist"
-          echo "----- Patched values -----"
+
+          # 2) .xcarchiveトップレベルのInfo.plist内、ApplicationPropertiesのキャッシュ値
+          #    (App Store Connectへのアップロード時、こちらが実際に参照されている可能性が高い)
+          /usr/libexec/PlistBuddy -c "Set :ApplicationProperties:CFBundleShortVersionString 2.0" "$ARCHIVE_INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Set :ApplicationProperties:CFBundleVersion $BUILD_NUMBER" "$ARCHIVE_INFO_PLIST"
+
+          echo "----- Patched values (.app) -----"
           /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Info.plist"
+          echo "----- Patched values (.xcarchive ApplicationProperties) -----"
+          /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleShortVersionString" "$ARCHIVE_INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:CFBundleVersion" "$ARCHIVE_INFO_PLIST"
 
       - name: Export ipa from the patched archive
         script: |
