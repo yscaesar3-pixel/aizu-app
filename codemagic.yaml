@@ -49,9 +49,12 @@ workflows:
 
       - name: Build ipa for App Store
         script: |
+          BUILD_NUMBER=$((100 + PROJECT_BUILD_NUMBER))
+          echo "Forcing version via archive-xcargs: MARKETING_VERSION=2.0 CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
           xcode-project build-ipa \
             --project "App.xcodeproj" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "MARKETING_VERSION=2.0 CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
 
       - name: DEBUG - dump the Info.plist INSIDE THE ARCHIVE (before IPA export/repackaging)
         script: |
