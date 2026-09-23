@@ -43,11 +43,26 @@ workflows:
         script: |
           xcode-project use-profiles
 
+      - name: DEBUG - check values survived the signing step
+        script: |
+          grep "CURRENT_PROJECT_VERSION\|MARKETING_VERSION" App.xcodeproj/project.pbxproj
+
       - name: Build ipa for App Store
         script: |
           xcode-project build-ipa \
             --project "App.xcodeproj" \
             --scheme "$XCODE_SCHEME"
+
+      - name: DEBUG - dump the Info.plist INSIDE THE ARCHIVE (before IPA export/repackaging)
+        script: |
+          ARCHIVE_PATH=$(find build/ios/xcarchive -maxdepth 1 -name "*.xcarchive" | head -1)
+          echo "Inspecting archive: $ARCHIVE_PATH"
+          APP_PATH=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" | head -1)
+          echo "App bundle inside archive: $APP_PATH"
+          echo "----- Archive's Info.plist (CFBundleVersion / CFBundleShortVersionString only) -----"
+          plutil -extract CFBundleShortVersionString xml1 -o - "$APP_PATH/Info.plist"
+          plutil -extract CFBundleVersion xml1 -o - "$APP_PATH/Info.plist"
+          echo "----------------------------------------------------"
 
       - name: DEBUG - dump the actually-compiled Info.plist from the built IPA
         script: |
