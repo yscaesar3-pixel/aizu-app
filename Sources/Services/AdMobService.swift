@@ -12,7 +12,7 @@ final class AdMobService: ObservableObject {
     static let shared = AdMobService()
 
     /// 原因切り分け用フラグ。false にするとAdMob関連処理を一切実行しない。
-    static let isAdMobEnabled = true
+    static let isAdMobEnabled = false
 
     static let bannerAdUnitID = "ca-app-pub-8174756915786797/4425929739" // aizu_ios_banner (本番)
 
