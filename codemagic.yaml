@@ -43,25 +43,41 @@ workflows:
         script: |
           xcode-project use-profiles
 
-      - name: DEBUG - check values survived the signing step
+      - name: Archive (separately, so we can patch the version afterward)
         script: |
-          grep "CURRENT_PROJECT_VERSION\|MARKETING_VERSION" App.xcodeproj/project.pbxproj
+          mkdir -p build/ios/xcarchive
+          xcodebuild -project "App.xcodeproj" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            -destination "generic/platform=iOS" \
+            DEVELOPMENT_TEAM=ACYAZKU7GH \
+            'CODE_SIGN_IDENTITY=Apple Distribution' \
+            CODE_SIGN_STYLE=Manual \
+            archive
 
-      - name: Build ipa for App Store
+      - name: Force-patch CFBundleVersion / CFBundleShortVersionString directly in the archived .app (bypasses whatever is breaking Xcode's own substitution)
         script: |
           BUILD_NUMBER=$((100 + PROJECT_BUILD_NUMBER))
-          echo "Forcing version via archive-xcargs: MARKETING_VERSION=2.0 CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
-          xcode-project build-ipa \
-            --project "App.xcodeproj" \
-            --scheme "$XCODE_SCHEME" \
-            --archive-xcargs "MARKETING_VERSION=2.0 CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
+          APP_PATH="build/ios/xcarchive/App.xcarchive/Products/Applications/App.app"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 2.0" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP_PATH/Info.plist"
+          echo "----- Patched values -----"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Info.plist"
+
+      - name: Export ipa from the patched archive
+        script: |
+          mkdir -p build/ios/ipa
+          xcodebuild -exportArchive \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist "$HOME/export_options.plist"
 
       - name: DEBUG - dump the Info.plist INSIDE THE ARCHIVE (before IPA export/repackaging)
         script: |
-          ARCHIVE_PATH=$(find build/ios/xcarchive -maxdepth 1 -name "*.xcarchive" | head -1)
-          echo "Inspecting archive: $ARCHIVE_PATH"
-          APP_PATH=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" | head -1)
-          echo "App bundle inside archive: $APP_PATH"
+          ARCHIVE_PATH="build/ios/xcarchive/App.xcarchive"
+          APP_PATH="$ARCHIVE_PATH/Products/Applications/App.app"
           echo "----- Archive's Info.plist (CFBundleVersion / CFBundleShortVersionString only) -----"
           plutil -extract CFBundleShortVersionString xml1 -o - "$APP_PATH/Info.plist"
           plutil -extract CFBundleVersion xml1 -o - "$APP_PATH/Info.plist"
