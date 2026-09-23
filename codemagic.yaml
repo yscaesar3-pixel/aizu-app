@@ -31,7 +31,10 @@ workflows:
 
       - name: Set build number AND marketing version explicitly (force via sed, do not rely on project.yml alone)
         script: |
-          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $PROJECT_BUILD_NUMBER;/" App.xcodeproj/project.pbxproj
+          # 過去のCapacitor版ビルド(最大11)を必ず上回るよう+100のオフセットを付ける
+          BUILD_NUMBER=$((100 + PROJECT_BUILD_NUMBER))
+          echo "Using build number: $BUILD_NUMBER"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/" App.xcodeproj/project.pbxproj
           sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = 2.0;/" App.xcodeproj/project.pbxproj
           echo "----- Confirm values after sed -----"
           grep "CURRENT_PROJECT_VERSION\|MARKETING_VERSION" App.xcodeproj/project.pbxproj
