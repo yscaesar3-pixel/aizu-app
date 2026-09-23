@@ -57,6 +57,15 @@ workflows:
             'OTHER_LDFLAGS=-ObjC' \
             archive
 
+      - name: Merge our custom Info.plist keys into the archived .app (Xcode was silently dropping them all - GADApplicationIdentifier, ATT description, SKAdNetworkItems, etc.)
+        script: |
+          APP_PATH="build/ios/xcarchive/App.xcarchive/Products/Applications/App.app"
+          echo "----- Before merge -----"
+          plutil -convert xml1 -o - "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c "Merge Info.plist :" "$APP_PATH/Info.plist"
+          echo "----- After merge -----"
+          plutil -convert xml1 -o - "$APP_PATH/Info.plist"
+
       - name: Force-patch CFBundleVersion / CFBundleShortVersionString directly in the archived .app (bypasses whatever is breaking Xcode's own substitution)
         script: |
           BUILD_NUMBER=$((100 + PROJECT_BUILD_NUMBER))
