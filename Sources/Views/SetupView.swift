@@ -24,7 +24,6 @@ struct SetupView: View {
             .padding(.horizontal, 24)
             Spacer()
             startButton
-            debugAdMobStatus // 原因確認用。落ち着いたら削除予定
             if AdMobService.isAdMobEnabled {
                 BannerAdView(adUnitID: AdMobService.bannerAdUnitID)
                     .frame(height: 50)
@@ -168,25 +167,6 @@ struct SetupView: View {
         if settings.upperLimitMinutes == 0 && settings.upperLimitSeconds < 10 {
             settings.upperLimitSeconds = 10
         }
-    }
-
-    // 原因確認用の一時的なデバッグ表示。ATTの許可状態とバナー広告のエラー内容を画面に出す。
-    private var debugAdMobStatus: some View {
-        VStack(spacing: 2) {
-            Text("[debug] ATT: \(adMob.trackingStatusDescription)")
-            if let err = adMob.lastBannerError {
-                Text("[debug] Banner error: \(err)")
-            } else if !adMob.isInitialized {
-                Text("[debug] AdMob SDK 初期化待ち...")
-            } else {
-                Text("[debug] AdMob SDK 初期化済み、バナー読み込み中/成功")
-            }
-        }
-        .font(.system(size: 10))
-        .foregroundColor(.gray)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 4)
-        .multilineTextAlignment(.center)
     }
 
     private func startTapped() {
