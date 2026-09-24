@@ -24,6 +24,7 @@ struct SetupView: View {
             .padding(.horizontal, 24)
             Spacer()
             startButton
+            debugAdMobStatus // 原因確認用。落ち着いたら削除予定
             if AdMobService.isAdMobEnabled {
                 BannerAdView(adUnitID: AdMobService.bannerAdUnitID)
                     .frame(height: 50)
@@ -52,12 +53,14 @@ struct SetupView: View {
                 }
                 .pickerStyle(.wheel)
                 .frame(width: 80, height: 100)
+                .onChange(of: settings.upperLimitMinutes) { _ in enforceMinimum() }
                 Text("分").font(.system(size: 15, weight: .semibold)).foregroundColor(labelGray)
                 Picker("秒", selection: $settings.upperLimitSeconds) {
                     ForEach(0...59, id: \.self) { s in Text(String(format: "%02d", s)).tag(s) }
                 }
                 .pickerStyle(.wheel)
                 .frame(width: 80, height: 100)
+                .onChange(of: settings.upperLimitSeconds) { _ in enforceMinimum() }
                 Text("秒").font(.system(size: 15, weight: .semibold)).foregroundColor(labelGray)
             }
             Text("10秒〜60分の範囲で設定できます")
@@ -158,6 +161,32 @@ struct SetupView: View {
         }
         .padding(.vertical, 15)
         .padding(.horizontal, 6)
+    }
+
+    private func enforceMinimum() {
+        // 0分0秒〜0分9秒は選択不可 → 自動的に10秒へ補正
+        if settings.upperLimitMinutes == 0 && settings.upperLimitSeconds < 10 {
+            settings.upperLimitSeconds = 10
+        }
+    }
+
+    // 原因確認用の一時的なデバッグ表示。ATTの許可状態とバナー広告のエラー内容を画面に出す。
+    private var debugAdMobStatus: some View {
+        VStack(spacing: 2) {
+            Text("[debug] ATT: \(adMob.trackingStatusDescription)")
+            if let err = adMob.lastBannerError {
+                Text("[debug] Banner error: \(err)")
+            } else if !adMob.isInitialized {
+                Text("[debug] AdMob SDK 初期化待ち...")
+            } else {
+                Text("[debug] AdMob SDK 初期化済み、バナー読み込み中/成功")
+            }
+        }
+        .font(.system(size: 10))
+        .foregroundColor(.gray)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+        .multilineTextAlignment(.center)
     }
 
     private func startTapped() {

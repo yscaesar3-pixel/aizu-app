@@ -20,6 +20,12 @@ final class AdMobService: ObservableObject {
     /// バナー広告はこれがtrueになるまでロードしない。
     @Published private(set) var isInitialized = false
 
+    /// バナー広告のロード失敗時のエラー内容(原因確認用。実機で直接読めるよう画面にも表示する)。
+    @Published var lastBannerError: String?
+
+    /// ATT許可ダイアログの現在の許可状態(原因確認用)。
+    @Published var trackingStatusDescription: String = "未確認"
+
     private var didStart = false
 
     private init() {}
@@ -29,14 +35,27 @@ final class AdMobService: ObservableObject {
         guard !didStart else { return }
         didStart = true
         if #available(iOS 14, *) {
-            ATTrackingManager.requestTrackingAuthorization { [weak self] _ in
-                // 許可/拒否いずれの結果でも、AdMob自体は初期化する(パーソナライズなし広告にフォールバック)
+            trackingStatusDescription = Self.describe(ATTrackingManager.trackingAuthorizationStatus)
+            ATTrackingManager.requestTrackingAuthorization { [weak self] status in
                 DispatchQueue.main.async {
+                    self?.trackingStatusDescription = Self.describe(status)
+                    // 許可/拒否いずれの結果でも、AdMob自体は初期化する(パーソナライズなし広告にフォールバック)
                     self?.startSDK()
                 }
             }
         } else {
             startSDK()
+        }
+    }
+
+    @available(iOS 14, *)
+    private static func describe(_ status: ATTrackingManager.AuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: return "未確定(notDetermined) - ダイアログが出るはずの状態"
+        case .restricted: return "制限あり(restricted)"
+        case .denied: return "拒否済み(denied) - 端末に既に記録されダイアログは出ません"
+        case .authorized: return "許可済み(authorized) - 端末に既に記録されダイアログは出ません"
+        @unknown default: return "不明"
         }
     }
 
