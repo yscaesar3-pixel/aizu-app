@@ -15,6 +15,10 @@ struct ContentView: View {
             }
             .onAppear {
                 timer.onSignal = { handleSignalShown() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                // 重要: ウィンドウが完全にアクティブになってから呼ばないと、
+                // iOSがATT許可ダイアログを出さずに「未確定」のまま即座に返してしまうことがある。
                 AdMobService.shared.requestTrackingAndInitialize()
             }
     }
